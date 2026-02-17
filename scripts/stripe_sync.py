@@ -16,7 +16,7 @@ from connectors.stripe_adapter import StripeConnector, serialize_result
 def main() -> int:
     parser = argparse.ArgumentParser(description="Sync Stripe data into Harmony Engine")
     parser.add_argument("--tenant-id", required=True, help="Tenant id for isolated sync storage")
-    parser.add_argument("--entities", nargs="*", default=None, help="Subset entities (charges customers invoices refunds)")
+    parser.add_argument("--entities", nargs="*", default=None, help="Subset entities (charges customers invoices refunds disputes payment_intents balance_transactions)")
     parser.add_argument("--since-epoch", type=int, default=None, help="Override incremental cursor start (unix epoch)")
     parser.add_argument("--page-limit", type=int, default=100)
     args = parser.parse_args()

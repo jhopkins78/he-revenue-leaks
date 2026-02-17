@@ -73,3 +73,12 @@ python3 scripts/smoke_test_api.py
 
 ## Notes
 Set `STRIPE_API_KEY` in the server environment before running Stripe sync.
+
+Stripe resources currently queried by default:
+- charges
+- customers
+- invoices
+- refunds
+- disputes
+- payment_intents
+- balance_transactions

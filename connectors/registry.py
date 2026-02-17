@@ -21,6 +21,6 @@ CONNECTOR_REGISTRY = {
     "stripe": ConnectorSpec(
         name="stripe",
         auth_mode="api_key",
-        entities=["charges", "customers", "invoices", "refunds"],
+        entities=["charges", "customers", "invoices", "refunds", "disputes", "payment_intents", "balance_transactions"],
     ),
 }

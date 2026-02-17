@@ -12,7 +12,7 @@ from urllib.request import Request, urlopen
 from connectors.base import ConnectorResult
 
 STRIPE_API_BASE = "https://api.stripe.com/v1"
-DEFAULT_ENTITIES = ["charges", "customers", "invoices", "refunds"]
+DEFAULT_ENTITIES = ["charges", "customers", "invoices", "refunds", "disputes", "payment_intents", "balance_transactions"]
 
 
 class StripeConnector:
