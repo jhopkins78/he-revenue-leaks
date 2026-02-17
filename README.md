@@ -17,6 +17,9 @@ pip install -r requirements.txt
 uvicorn backend.app.main:app --host 0.0.0.0 --port 8001
 ```
 
+Open dashboard:
+- `http://localhost:8001/dashboard`
+
 ## Endpoints
 - `GET /api/connectors/health`
 - `POST /api/connectors/stripe/sync`
@@ -40,6 +43,13 @@ Each tenant is isolated in storage paths:
 - `data/raw/<tenant>/...`
 - `data/normalized/<tenant>/...`
 - `logs/tenants/<tenant>/...`
+
+## Smoke test
+```bash
+export HE_API_KEY=replace_me
+export TENANT_ID=demo
+python3 scripts/smoke_test_api.py
+```
 
 ## Notes
 Set `STRIPE_API_KEY` in the server environment before running Stripe sync.

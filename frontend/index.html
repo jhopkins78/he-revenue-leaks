@@ -1,0 +1,79 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HE Revenue Leaks Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .row { display:flex; gap:12px; margin-bottom:16px; flex-wrap: wrap; }
+    .card { border:1px solid #ddd; padding:12px; border-radius:8px; min-width:220px; }
+    table { border-collapse: collapse; width:100%; }
+    th, td { border:1px solid #ddd; padding:8px; font-size:14px; }
+    th { background:#f5f5f5; }
+    input { padding:8px; }
+    button { padding:8px 12px; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <h2>Revenue Leak Program (v1)</h2>
+  <div class="row">
+    <input id="baseUrl" value="http://localhost:8001" style="width:240px" />
+    <input id="apiKey" placeholder="X-API-Key" style="width:220px" />
+    <input id="tenantId" placeholder="X-Tenant-Id" style="width:180px" />
+    <button onclick="loadAll()">Refresh</button>
+  </div>
+
+  <h3>Summary</h3>
+  <div class="row" id="cards"></div>
+
+  <h3>Top Leaks</h3>
+  <table id="leaks"><thead><tr><th>Signal</th><th>Loss USD</th><th>Severity</th><th>Confidence</th></tr></thead><tbody></tbody></table>
+
+  <h3>Trend</h3>
+  <pre id="trend"></pre>
+
+  <script>
+    function headers(){
+      return {
+        'X-API-Key': document.getElementById('apiKey').value,
+        'X-Tenant-Id': document.getElementById('tenantId').value,
+      }
+    }
+    async function get(path){
+      const base = document.getElementById('baseUrl').value.replace(/\/$/, '')
+      const res = await fetch(base + path, { headers: headers() })
+      if(!res.ok) throw new Error(await res.text())
+      return await res.json()
+    }
+    function renderCards(c){
+      const el = document.getElementById('cards'); el.innerHTML='';
+      Object.entries(c || {}).forEach(([k,v]) => {
+        const d = document.createElement('div'); d.className='card';
+        d.innerHTML = `<b>${k}</b><div>${v}</div>`;
+        el.appendChild(d)
+      })
+    }
+    function renderLeaks(leaks){
+      const tb = document.querySelector('#leaks tbody'); tb.innerHTML='';
+      (leaks || []).forEach(x => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${x.signal_id}</td><td>${x.estimated_loss_usd}</td><td>${x.severity}</td><td>${x.confidence}</td>`;
+        tb.appendChild(tr)
+      })
+    }
+    async function loadAll(){
+      try {
+        const runs = await get('/api/templates/revenue-leaks/runs?limit=1');
+        const trend = await get('/api/templates/revenue-leaks/trend?limit=20');
+        const latest = runs.latest || {};
+        renderCards((latest.summaryCards)||{});
+        renderLeaks((latest.topLeaks)||[]);
+        document.getElementById('trend').textContent = JSON.stringify(trend.points || [], null, 2);
+      } catch (e) {
+        alert('Load failed: ' + e.message)
+      }
+    }
+  </script>
+</body>
+</html>
