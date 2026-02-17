@@ -5,6 +5,7 @@ from collections import defaultdict, deque
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from backend.app.config import load_env_if_present
 from backend.app.routes import dashboard, revenue_leaks, stripe_connector
@@ -50,6 +51,8 @@ async def request_log_and_rate_limit(request: Request, call_next):
     print(f"[api] {request.method} {request.url.path} status={response.status_code} ms={elapsed_ms}")
     return response
 
+
+app.mount("/assets", StaticFiles(directory="frontend/assets"), name="assets")
 
 app.include_router(dashboard.router)
 app.include_router(stripe_connector.router, prefix="/api", dependencies=[Depends(require_api_key)])

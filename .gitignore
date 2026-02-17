@@ -9,3 +9,6 @@ runtime/
 data/raw/
 data/normalized/
 reports/
+
+# Local frontend workspace (source generated externally)
+he-revenue-leaks-dashboard/
