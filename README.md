@@ -44,6 +44,19 @@ Each tenant is isolated in storage paths:
 - `data/normalized/<tenant>/...`
 - `logs/tenants/<tenant>/...`
 
+## Demo in one click (seed + run)
+Start API first:
+```bash
+uvicorn backend.app.main:app --host 0.0.0.0 --port 8001 --reload
+```
+
+Then in another terminal:
+```bash
+export HE_API_KEY=replace_me
+export TENANT_ID=demo
+python3 scripts/demo_one_click.py
+```
+
 ## Smoke test
 ```bash
 export HE_API_KEY=replace_me

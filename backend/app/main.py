@@ -4,7 +4,7 @@ from collections import defaultdict, deque
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from backend.app.routes import dashboard, revenue_leaks, stripe_connector
 from backend.app.security import require_api_key
@@ -21,6 +21,11 @@ app.add_middleware(
 
 _RATE_LIMIT_PER_MIN = int(os.getenv("HE_RATE_LIMIT_PER_MIN", "120"))
 _hits = defaultdict(deque)
+
+
+@app.get("/")
+def root_redirect():
+    return RedirectResponse(url="/dashboard", status_code=307)
 
 
 @app.middleware("http")
