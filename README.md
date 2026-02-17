@@ -14,6 +14,7 @@ cd /Users/joshuahopkins/Documents/he-revenue-leaks
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+cp .env.example .env
 uvicorn backend.app.main:app --host 0.0.0.0 --port 8001
 ```
 
@@ -30,11 +31,17 @@ Open dashboard:
 - `GET /api/templates/revenue-leaks/trend`
 
 ## Security + Tenant isolation
+Generate an API key quickly:
+```bash
+python3 scripts/generate_api_key.py --export
+# paste output into your shell or .env
+```
+
 All `/api/*` endpoints require headers:
 - `X-API-Key: <server key>`
 - `X-Tenant-Id: <tenant_slug>`
 
-Set auth env vars:
+Set auth env vars (loaded from `.env` automatically if present):
 - `HE_API_KEY` (single key) or
 - `HE_API_KEYS_JSON` (JSON array of keys)
 

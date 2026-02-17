@@ -6,8 +6,11 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 
+from backend.app.config import load_env_if_present
 from backend.app.routes import dashboard, revenue_leaks, stripe_connector
 from backend.app.security import require_api_key
+
+load_env_if_present()
 
 app = FastAPI(title="HE Revenue Leaks API")
 
