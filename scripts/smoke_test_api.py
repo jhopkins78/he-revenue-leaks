@@ -35,7 +35,13 @@ def main() -> int:
         url = base.rstrip("/") + t
         try:
             status, payload = req(url, key, tenant)
-            print(f"PASS {t} status={status} keys={list(payload.keys())[:5]}")
+            if isinstance(payload, dict):
+                preview = f"keys={list(payload.keys())[:5]}"
+            elif isinstance(payload, list):
+                preview = f"list_len={len(payload)}"
+            else:
+                preview = f"type={type(payload).__name__}"
+            print(f"PASS {t} status={status} {preview}")
         except urllib.error.HTTPError as e:
             print(f"FAIL {t} http={e.code} body={e.read().decode('utf-8', errors='ignore')}")
             return 1
