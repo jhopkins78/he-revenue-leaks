@@ -64,6 +64,14 @@ export TENANT_ID=demo
 python3 scripts/demo_one_click.py
 ```
 
+## Investor snapshot export
+```bash
+python3 scripts/export_investor_snapshot.py --tenant-id demo2
+```
+Outputs:
+- `reports/investor_snapshots/<tenant>_<runTs>_snapshot.json`
+- `reports/investor_snapshots/<tenant>_<runTs>_snapshot.md`
+
 ## Smoke test
 ```bash
 export HE_API_KEY=replace_me
