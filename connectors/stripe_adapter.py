@@ -13,23 +13,21 @@ from connectors.base import ConnectorResult
 
 STRIPE_API_BASE = "https://api.stripe.com/v1"
 DEFAULT_ENTITIES = ["charges", "customers", "invoices", "refunds"]
-CURSOR_PATH = Path("runtime/connectors/stripe_cursor.json")
-RAW_DIR = Path("data/raw/stripe")
-NORMALIZED_DIR = Path("data/normalized/stripe")
 
 
 class StripeConnector:
-    """Stripe connector with incremental-sync cursor tracking.
+    """Stripe connector with tenant-isolated incremental sync cursor tracking."""
 
-    Cursor strategy:
-    - Per-entity watermark at max(created) epoch seconds.
-    - Next sync uses `created[gte]=watermark`.
-    """
-
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, tenant_id: str, api_key: Optional[str] = None):
+        self.tenant_id = tenant_id
         self.api_key = api_key or os.getenv("STRIPE_API_KEY")
         if not self.api_key:
             raise ValueError("STRIPE_API_KEY is required for Stripe connector")
+
+        self.cursor_path = Path(f"runtime/connectors/{tenant_id}/stripe_cursor.json")
+        self.health_path = Path(f"runtime/connectors/{tenant_id}/stripe_health.json")
+        self.raw_dir = Path(f"data/raw/{tenant_id}/stripe")
+        self.normalized_dir = Path(f"data/normalized/{tenant_id}/stripe")
 
     def sync(
         self,
@@ -43,29 +41,35 @@ class StripeConnector:
 
         total = 0
         per_entity: Dict[str, Dict] = {}
-        for entity in entities:
-            start_epoch = since_epoch if since_epoch is not None else int(cursor.get(entity, 0) or 0)
-            records, max_created = self._fetch_entity(entity, start_epoch, page_limit=page_limit)
-            self._write_outputs(entity, records)
-            total += len(records)
-            per_entity[entity] = {
-                "records": len(records),
-                "from_epoch": start_epoch,
-                "to_epoch": max_created,
-            }
-            if max_created and max_created > int(cursor.get(entity, 0) or 0):
-                cursor[entity] = max_created
+        try:
+            for entity in entities:
+                start_epoch = since_epoch if since_epoch is not None else int(cursor.get(entity, 0) or 0)
+                records, max_created = self._fetch_entity(entity, start_epoch, page_limit=page_limit)
+                self._write_outputs(entity, records)
+                total += len(records)
+                per_entity[entity] = {
+                    "records": len(records),
+                    "from_epoch": start_epoch,
+                    "to_epoch": max_created,
+                }
+                if max_created and max_created > int(cursor.get(entity, 0) or 0):
+                    cursor[entity] = max_created
 
-        self._save_cursor(cursor)
-        finished = datetime.now().isoformat()
-        return ConnectorResult(
-            connector="stripe",
-            status="success",
-            records_synced=total,
-            started_at=started,
-            finished_at=finished,
-            details={"entities": per_entity, "cursor_path": str(CURSOR_PATH)},
-        )
+            self._save_cursor(cursor)
+            finished = datetime.now().isoformat()
+            self._write_health("healthy", finished, None)
+            return ConnectorResult(
+                connector="stripe",
+                status="success",
+                records_synced=total,
+                started_at=started,
+                finished_at=finished,
+                details={"entities": per_entity, "cursor_path": str(self.cursor_path), "tenant_id": self.tenant_id},
+            )
+        except Exception as e:
+            finished = datetime.now().isoformat()
+            self._write_health("degraded", finished, str(e))
+            raise
 
     def _fetch_entity(self, entity: str, start_epoch: int, page_limit: int = 100) -> Tuple[List[Dict], int]:
         all_records: List[Dict] = []
@@ -111,34 +115,32 @@ class StripeConnector:
             body = res.read().decode("utf-8")
             return json.loads(body)
 
-    @staticmethod
-    def _load_cursor() -> Dict:
-        if CURSOR_PATH.exists():
+    def _load_cursor(self) -> Dict:
+        if self.cursor_path.exists():
             try:
-                return json.loads(CURSOR_PATH.read_text(encoding="utf-8"))
+                return json.loads(self.cursor_path.read_text(encoding="utf-8"))
             except Exception:
                 return {}
         return {}
 
-    @staticmethod
-    def _save_cursor(cursor: Dict) -> None:
-        CURSOR_PATH.parent.mkdir(parents=True, exist_ok=True)
-        CURSOR_PATH.write_text(json.dumps(cursor, indent=2), encoding="utf-8")
+    def _save_cursor(self, cursor: Dict) -> None:
+        self.cursor_path.parent.mkdir(parents=True, exist_ok=True)
+        self.cursor_path.write_text(json.dumps(cursor, indent=2), encoding="utf-8")
 
-    @staticmethod
-    def _write_outputs(entity: str, records: List[Dict]) -> None:
-        RAW_DIR.mkdir(parents=True, exist_ok=True)
-        NORMALIZED_DIR.mkdir(parents=True, exist_ok=True)
+    def _write_outputs(self, entity: str, records: List[Dict]) -> None:
+        self.raw_dir.mkdir(parents=True, exist_ok=True)
+        self.normalized_dir.mkdir(parents=True, exist_ok=True)
 
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        raw_path = RAW_DIR / f"{entity}_{ts}.json"
-        normalized_path = NORMALIZED_DIR / f"{entity}_{ts}.jsonl"
+        raw_path = self.raw_dir / f"{entity}_{ts}.json"
+        normalized_path = self.normalized_dir / f"{entity}_{ts}.jsonl"
 
         raw_path.write_text(json.dumps(records, ensure_ascii=False, indent=2), encoding="utf-8")
 
         with normalized_path.open("w", encoding="utf-8") as f:
             for record in records:
                 normalized = {
+                    "tenant_id": self.tenant_id,
                     "connector": "stripe",
                     "entity": entity,
                     "id": record.get("id"),
@@ -147,6 +149,24 @@ class StripeConnector:
                     "payload": record,
                 }
                 f.write(json.dumps(normalized, ensure_ascii=False) + "\n")
+
+    def _write_health(self, status: str, ts: str, error: Optional[str]) -> None:
+        self.health_path.parent.mkdir(parents=True, exist_ok=True)
+        self.health_path.write_text(
+            json.dumps(
+                {
+                    "name": "stripe",
+                    "tenant_id": self.tenant_id,
+                    "status": status,
+                    "configured": bool(self.api_key),
+                    "last_run_ts": ts,
+                    "last_error": error,
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
 
 
 def serialize_result(result: ConnectorResult) -> Dict:

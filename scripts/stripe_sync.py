@@ -15,12 +15,13 @@ from connectors.stripe_adapter import StripeConnector, serialize_result
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Sync Stripe data into Harmony Engine")
+    parser.add_argument("--tenant-id", required=True, help="Tenant id for isolated sync storage")
     parser.add_argument("--entities", nargs="*", default=None, help="Subset entities (charges customers invoices refunds)")
     parser.add_argument("--since-epoch", type=int, default=None, help="Override incremental cursor start (unix epoch)")
     parser.add_argument("--page-limit", type=int, default=100)
     args = parser.parse_args()
 
-    connector = StripeConnector()
+    connector = StripeConnector(tenant_id=args.tenant_id)
     result = connector.sync(entities=args.entities, since_epoch=args.since_epoch, page_limit=args.page_limit)
     print(json.dumps(serialize_result(result), ensure_ascii=False, indent=2))
     return 0

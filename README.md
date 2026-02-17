@@ -18,11 +18,28 @@ uvicorn backend.app.main:app --host 0.0.0.0 --port 8001
 ```
 
 ## Endpoints
+- `GET /api/connectors/health`
 - `POST /api/connectors/stripe/sync`
 - `GET /api/connectors/stripe/status`
 - `POST /api/templates/revenue-leaks/run`
+- `GET /api/templates/revenue-leaks/contracts`
 - `GET /api/templates/revenue-leaks/runs`
 - `GET /api/templates/revenue-leaks/trend`
+
+## Security + Tenant isolation
+All `/api/*` endpoints require headers:
+- `X-API-Key: <server key>`
+- `X-Tenant-Id: <tenant_slug>`
+
+Set auth env vars:
+- `HE_API_KEY` (single key) or
+- `HE_API_KEYS_JSON` (JSON array of keys)
+
+Each tenant is isolated in storage paths:
+- `runtime/connectors/<tenant>/...`
+- `data/raw/<tenant>/...`
+- `data/normalized/<tenant>/...`
+- `logs/tenants/<tenant>/...`
 
 ## Notes
 Set `STRIPE_API_KEY` in the server environment before running Stripe sync.
