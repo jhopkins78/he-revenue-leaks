@@ -71,6 +71,12 @@ def seed_demo(tenant_id: str = "demo") -> dict:
 
 
 if __name__ == "__main__":
+    import argparse
     import json
-    out = seed_demo("demo")
+
+    ap = argparse.ArgumentParser(description="Seed deterministic demo tenant data")
+    ap.add_argument("--tenant-id", default="demo", help="Tenant id folder to write into")
+    args = ap.parse_args()
+
+    out = seed_demo(args.tenant_id)
     print(json.dumps(out, indent=2))
