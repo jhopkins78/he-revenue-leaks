@@ -4,10 +4,11 @@ from pathlib import Path
 
 router = APIRouter()
 
+FRONTEND_INDEX = Path(__file__).resolve().parents[3] / "frontend" / "index.html"
+
 
 @router.get("/dashboard")
 def dashboard():
-    p = Path("frontend/index.html")
-    if p.exists():
-        return FileResponse(str(p))
-    return {"status": "missing_frontend", "message": "frontend/index.html not found"}
+    if FRONTEND_INDEX.exists():
+        return FileResponse(str(FRONTEND_INDEX))
+    return {"status": "missing_frontend", "message": f"{FRONTEND_INDEX} not found"}

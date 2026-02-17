@@ -7,11 +7,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
+from pathlib import Path
+
 from backend.app.config import load_env_if_present
 from backend.app.routes import dashboard, revenue_leaks, stripe_connector
 from backend.app.security import require_api_key
 
 load_env_if_present()
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+FRONTEND_ASSETS = REPO_ROOT / "frontend" / "assets"
 
 app = FastAPI(title="HE Revenue Leaks API")
 
@@ -52,7 +57,8 @@ async def request_log_and_rate_limit(request: Request, call_next):
     return response
 
 
-app.mount("/assets", StaticFiles(directory="frontend/assets"), name="assets")
+if FRONTEND_ASSETS.exists():
+    app.mount("/assets", StaticFiles(directory=str(FRONTEND_ASSETS)), name="assets")
 
 app.include_router(dashboard.router)
 app.include_router(stripe_connector.router, prefix="/api", dependencies=[Depends(require_api_key)])
